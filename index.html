@@ -113,6 +113,40 @@
     .btn-icon.excluir { color: var(--red); border-color: #ef9a9a; }
     .btn-icon.excluir:hover { background: #fde8e8; }
 
+    /* ── Dias em aberto ── */
+    .dias-aberto { display: inline-block; font-size: .72rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; }
+    .dias-ok     { background: var(--green-bg); color: var(--green); }
+    .dias-alerta { background: #fff3e0; color: #e65100; }
+    .dias-critico{ background: #fde8e8; color: var(--red); }
+
+    /* ── Dashboard ── */
+    .dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-bottom: 28px; }
+    .kpi { background: var(--white); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); border-top: 3px solid var(--border); }
+    .kpi-valor { font-size: 2rem; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+    .kpi-label { font-size: .78rem; color: var(--gray); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+    .kpi.verde  { border-color: var(--green); }       .kpi.verde  .kpi-valor { color: var(--green); }
+    .kpi.azul   { border-color: var(--blue); }        .kpi.azul   .kpi-valor { color: var(--blue); }
+    .kpi.vermelho{ border-color: var(--red); }        .kpi.vermelho .kpi-valor { color: var(--red); }
+    .kpi.laranja { border-color: #e65100; }           .kpi.laranja .kpi-valor { color: #e65100; }
+    .kpi.roxo   { border-color: var(--purple); }      .kpi.roxo  .kpi-valor { color: var(--purple); }
+    .kpi.cinza  { border-color: var(--gray); }        .kpi.cinza .kpi-valor { color: var(--gray); }
+
+    .dash-section { margin-bottom: 28px; }
+    .dash-section-title { font-size: .85rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--gray); margin-bottom: 12px; }
+
+    .dash-bar-list { display: flex; flex-direction: column; gap: 10px; background: var(--white); border-radius: var(--radius); padding: 16px 20px; box-shadow: var(--shadow); }
+    .dash-bar-row { display: flex; align-items: center; gap: 10px; }
+    .dash-bar-label { font-size: .83rem; width: 160px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dash-bar-track { flex: 1; background: var(--gray-light); border-radius: 99px; height: 10px; overflow: hidden; }
+    .dash-bar-fill  { height: 100%; border-radius: 99px; transition: width .4s; }
+    .dash-bar-count { font-size: .78rem; font-weight: 700; color: var(--gray); width: 28px; text-align: right; flex-shrink: 0; }
+
+    .dash-aberto-list { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .dash-aberto-list table { width: 100%; border-collapse: collapse; }
+    .dash-aberto-list th { background: var(--gray-light); padding: 9px 14px; text-align: left; font-size: .75rem; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: .4px; }
+    .dash-aberto-list td { padding: 10px 14px; font-size: .85rem; border-top: 1px solid var(--border); }
+    .dash-aberto-list tr:hover td { background: #fafafa; cursor: pointer; }
+
     /* ── Empty ── */
     .empty-state { text-align: center; color: var(--gray); padding: 48px 0; font-size: .95rem; grid-column: 1/-1; }
     .empty-state span { display: block; font-size: 2.5rem; margin-bottom: 8px; }
@@ -189,6 +223,7 @@
       <button class="tab-btn active" data-tab="atividades">Atividades</button>
       <button class="tab-btn" data-tab="pessoas">Pessoas</button>
       <button class="tab-btn" data-tab="clientes">Clientes</button>
+      <button class="tab-btn" data-tab="dashboard">📊 Dashboard</button>
       <button class="tab-btn" data-tab="agenda">📅 Agenda</button>
     </nav>
   </div>
@@ -374,6 +409,7 @@
       <div class="detalhe-field"><span class="detalhe-label">🏢 Cliente</span><span class="detalhe-value" id="detalheCliente"></span></div>
       <div class="detalhe-field"><span class="detalhe-label">🕒 Criado em</span><span class="detalhe-value" id="detalheCriado"></span></div>
       <div class="detalhe-field" id="detalheConclusaoField"><span class="detalhe-label">✅ Concluído em</span><span class="detalhe-value" id="detalheConclusao"></span></div>
+      <div class="detalhe-field" id="detalheDiasField"><span class="detalhe-label">⏳ Dias em aberto</span><span class="detalhe-value" id="detalheDias"></span></div>
       <div class="detalhe-field hidden" id="detalheRoladaField"><span class="detalhe-label">↩ Data original</span><span class="detalhe-value" id="detalheOriginal"></span></div>
     </div>
     <div class="modal-actions" style="margin-top:20px">
@@ -384,6 +420,46 @@
     </div>
   </div>
 </div>
+
+<!-- ══ ABA DASHBOARD ══════════════════════════════════════ -->
+<main id="tab-dashboard" class="tab-content">
+  <!-- KPIs -->
+  <div class="dash-grid" id="dashKpis"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;flex-wrap:wrap" id="dashCols">
+    <!-- Por pessoa -->
+    <div class="dash-section">
+      <div class="dash-section-title">Atividades pendentes por pessoa</div>
+      <div class="dash-bar-list" id="dashBarPessoa"></div>
+    </div>
+    <!-- Por prioridade -->
+    <div class="dash-section">
+      <div class="dash-section-title">Atividades pendentes por prioridade</div>
+      <div class="dash-bar-list" id="dashBarPrioridade"></div>
+    </div>
+    <!-- Por cliente -->
+    <div class="dash-section">
+      <div class="dash-section-title">Atividades pendentes por cliente</div>
+      <div class="dash-bar-list" id="dashBarCliente"></div>
+    </div>
+    <!-- Concluídas por dia (últimos 7 dias) -->
+    <div class="dash-section">
+      <div class="dash-section-title">Concluídas nos últimos 7 dias</div>
+      <div class="dash-bar-list" id="dashBarConcluidas"></div>
+    </div>
+  </div>
+
+  <!-- Mais antigas em aberto -->
+  <div class="dash-section">
+    <div class="dash-section-title">⏳ Atividades há mais tempo em aberto</div>
+    <div class="dash-aberto-list">
+      <table>
+        <thead><tr><th>Atividade</th><th>Responsável</th><th>Cliente</th><th>Criado em</th><th>Dias em aberto</th><th>Prioridade</th></tr></thead>
+        <tbody id="dashTabelaAberto"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
 
 <!-- ══ ABA AGENDA ══════════════════════════════════════════ -->
 <main id="tab-agenda" class="tab-content">
@@ -512,9 +588,10 @@ function bindTabs() {
       document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-      if (btn.dataset.tab === 'pessoas')  renderPessoas();
-      if (btn.dataset.tab === 'clientes') renderClientes();
-      if (btn.dataset.tab === 'agenda')   iniciarAgenda();
+      if (btn.dataset.tab === 'pessoas')   renderPessoas();
+      if (btn.dataset.tab === 'clientes')  renderClientes();
+      if (btn.dataset.tab === 'agenda')    iniciarAgenda();
+      if (btn.dataset.tab === 'dashboard') renderDashboard();
     });
   });
 }
@@ -643,6 +720,7 @@ function renderAtividades(lista, pessoas, clientes) {
           ${rolada} ${tipoBadge}
           <span class="badge badge-${a.prioridade}">${a.prioridade}</span>
           <span class="badge badge-${a.status}">${a.status}</span>
+          ${badgeDias(diasEmAberto(a))}
         </div>
         <div class="list-item-actions" onclick="event.stopPropagation()">
           ${acao}
@@ -672,7 +750,7 @@ function renderAtividades(lista, pessoas, clientes) {
           <span>📅 ${fmtDate(a.data)}</span>
           <span>👤 ${esc(p ? p.nome : '—')}${tipoBadge}</span>
           ${c ? `<span>🏢 ${esc(c.nome)}</span>` : ''}
-          <span>${rolada}<span class="badge badge-${a.status}">${a.status}</span></span>
+          <span>${rolada}<span class="badge badge-${a.status}">${a.status}</span> ${badgeDias(diasEmAberto(a))}</span>
         </div>
         <div class="card-actions">
           ${acao}
@@ -804,9 +882,12 @@ function abrirDetalhe(id) {
   document.getElementById('detalheData').textContent   = fmtDate(a.data);
   document.getElementById('detalhePessoa').innerHTML   = p ? `${esc(p.nome)} <span class="badge badge-${p.tipo}">${p.tipo}</span>` : '—';
   document.getElementById('detalheCliente').textContent = c ? c.nome : '—';
-  document.getElementById('detalheCriado').textContent    = a.criadoEm    ? fmtDateTime(a.criadoEm)    : '—';
-  document.getElementById('detalheConclusao').textContent = a.concluidoEm  ? fmtDateTime(a.concluidoEm) : '—';
+  document.getElementById('detalheCriado').textContent    = a.criadoEm   ? fmtDateTime(a.criadoEm)    : '—';
+  document.getElementById('detalheConclusao').textContent = a.concluidoEm ? fmtDateTime(a.concluidoEm) : '—';
   document.getElementById('detalheConclusaoField').classList.toggle('hidden', !a.concluidoEm);
+  const dias = diasEmAberto(a);
+  document.getElementById('detalheDiasField').classList.toggle('hidden', dias === null);
+  document.getElementById('detalheDias').innerHTML = dias !== null ? badgeDias(dias) : '';
 
   const bp = document.getElementById('detalheBadgePrioridade');
   bp.textContent = a.prioridade; bp.className = `badge badge-${a.prioridade}`;
@@ -938,6 +1019,137 @@ function fecharTodos() {
   ['modalAtividade','modalPessoa','modalCliente','modalDetalhe'].forEach(id =>
     document.getElementById(id).classList.add('hidden'));
   document.getElementById('overlay').classList.add('hidden');
+}
+
+// ══ Dias em aberto ═══════════════════════════════════════════
+function diasEmAberto(a) {
+  if (a.status === 'concluida') return null;
+  if (!a.criadoEm) return null;
+  const criado = new Date(a.criadoEm);
+  const hoje   = new Date();
+  return Math.floor((hoje - criado) / 86400000);
+}
+
+function badgeDias(dias) {
+  if (dias === null) return '';
+  let cls = dias <= 2 ? 'dias-ok' : dias <= 7 ? 'dias-alerta' : 'dias-critico';
+  return `<span class="dias-aberto ${cls}">${dias}d em aberto</span>`;
+}
+
+// ══ Dashboard ═════════════════════════════════════════════════
+function renderDashboard() {
+  const db = load();
+  const todas     = db.atividades;
+  const pendentes = todas.filter(a => a.status === 'pendente');
+  const concluidas= todas.filter(a => a.status === 'concluida');
+  const hoje      = new Date(); hoje.setHours(0,0,0,0);
+
+  // ── KPIs ──
+  const maxDias = pendentes.reduce((m, a) => Math.max(m, diasEmAberto(a) ?? 0), 0);
+  const mediaDias = pendentes.length
+    ? Math.round(pendentes.reduce((s, a) => s + (diasEmAberto(a) ?? 0), 0) / pendentes.length)
+    : 0;
+  const criticas = pendentes.filter(a => (diasEmAberto(a) ?? 0) > 7).length;
+
+  document.getElementById('dashKpis').innerHTML = [
+    { val: todas.length,      label: 'Total de atividades', cls: 'azul'     },
+    { val: pendentes.length,  label: 'Pendentes',           cls: 'laranja'  },
+    { val: concluidas.length, label: 'Concluídas',          cls: 'verde'    },
+    { val: criticas,          label: 'Pendentes > 7 dias',  cls: 'vermelho' },
+    { val: mediaDias + 'd',   label: 'Média dias em aberto',cls: 'roxo'     },
+    { val: maxDias + 'd',     label: 'Mais dias em aberto', cls: 'cinza'    },
+  ].map(k => `<div class="kpi ${k.cls}"><div class="kpi-valor">${k.val}</div><div class="kpi-label">${k.label}</div></div>`).join('');
+
+  // ── Barras por pessoa ──
+  renderBarras('dashBarPessoa', pendentes, a => {
+    const p = db.pessoas.find(x => x.id === a.pessoaId);
+    return p ? `${p.nome} (${p.tipo})` : '— Sem responsável';
+  }, '#1976d2');
+
+  // ── Barras por prioridade ──
+  const corPrio = { alta: '#c62828', normal: '#1976d2', baixa: '#9e9e9e' };
+  renderBarras('dashBarPrioridade', pendentes, a => a.prioridade, p => corPrio[p] || '#999');
+
+  // ── Barras por cliente ──
+  renderBarras('dashBarCliente', pendentes, a => {
+    const c = db.clientes.find(x => x.id === a.clienteId);
+    return c ? c.nome : '— Sem cliente';
+  }, '#2e7d32');
+
+  // ── Concluídas últimos 7 dias ──
+  const dias7 = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(hoje); d.setDate(d.getDate() - (6 - i));
+    return d.toISOString().split('T')[0];
+  });
+  const contDia = {};
+  dias7.forEach(d => contDia[d] = 0);
+  concluidas.forEach(a => {
+    if (a.concluidoEm) {
+      const d = a.concluidoEm.split('T')[0];
+      if (contDia[d] !== undefined) contDia[d]++;
+    }
+  });
+  const maxConc = Math.max(1, ...Object.values(contDia));
+  document.getElementById('dashBarConcluidas').innerHTML = dias7.map(d => {
+    const dt   = new Date(d + 'T12:00:00');
+    const label= dt.toLocaleDateString('pt-BR', { weekday:'short', day:'numeric', month:'short' });
+    const pct  = Math.round((contDia[d] / maxConc) * 100);
+    return barraRow(label, contDia[d], pct, '#4caf50');
+  }).join('') || '<span style="color:var(--gray);font-size:.85rem">Sem dados</span>';
+
+  // ── Tabela mais antigas em aberto ──
+  const ordenadas = [...pendentes]
+    .map(a => ({ ...a, dias: diasEmAberto(a) ?? 0 }))
+    .sort((a, b) => b.dias - a.dias)
+    .slice(0, 15);
+
+  document.getElementById('dashTabelaAberto').innerHTML = ordenadas.length
+    ? ordenadas.map(a => {
+        const p = db.pessoas.find(x => x.id === a.pessoaId);
+        const c = db.clientes.find(x => x.id === a.clienteId);
+        let cls = a.dias <= 2 ? 'dias-ok' : a.dias <= 7 ? 'dias-alerta' : 'dias-critico';
+        return `<tr onclick="irParaAtividade('${a.id}')">
+          <td>${esc(a.titulo)}</td>
+          <td>${esc(p ? p.nome : '—')}</td>
+          <td>${esc(c ? c.nome : '—')}</td>
+          <td>${a.criadoEm ? fmtDateTime(a.criadoEm) : '—'}</td>
+          <td><span class="dias-aberto ${cls}">${a.dias}d</span></td>
+          <td><span class="badge badge-${a.prioridade}">${a.prioridade}</span></td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="6" style="text-align:center;color:#888;padding:24px">Nenhuma atividade pendente.</td></tr>';
+}
+
+function renderBarras(elId, lista, keyFn, cor) {
+  const cont = {};
+  lista.forEach(a => { const k = keyFn(a); cont[k] = (cont[k] || 0) + 1; });
+  const max = Math.max(1, ...Object.values(cont));
+  const corFn = typeof cor === 'function' ? cor : () => cor;
+  const rows = Object.entries(cont).sort((a,b) => b[1]-a[1])
+    .map(([k, v]) => barraRow(k, v, Math.round(v/max*100), corFn(k))).join('');
+  document.getElementById(elId).innerHTML = rows ||
+    '<span style="color:var(--gray);font-size:.85rem">Nenhuma atividade pendente.</span>';
+}
+
+function barraRow(label, count, pct, cor) {
+  return `<div class="dash-bar-row">
+    <span class="dash-bar-label" title="${esc(label)}">${esc(label)}</span>
+    <div class="dash-bar-track"><div class="dash-bar-fill" style="width:${pct}%;background:${cor}"></div></div>
+    <span class="dash-bar-count">${count}</span>
+  </div>`;
+}
+
+function irParaAtividade(id) {
+  // Vai para a aba de atividades, limpa filtros e abre o detalhe
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelector('[data-tab="atividades"]').classList.add('active');
+  document.getElementById('tab-atividades').classList.add('active');
+  document.getElementById('filtroData').value   = '';
+  document.getElementById('filtroStatus').value = '';
+  setDateMode('unica');
+  aplicarFiltros();
+  setTimeout(() => abrirDetalhe(id), 100);
 }
 
 // ══ Agenda / Google Calendar ICS ═════════════════════════════
