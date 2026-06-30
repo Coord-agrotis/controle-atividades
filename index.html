@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controle de Atividades</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green: #2e7d32; --green-light: #4caf50; --green-bg: #e8f5e9;
+      --red: #c62828; --orange: #e65100; --gray: #6b7280;
+      --gray-light: #f3f4f6; --border: #e0e0e0; --white: #ffffff;
+      --shadow: 0 1px 4px rgba(0,0,0,.1); --radius: 8px;
+    }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f0; color: #1a1a1a; min-height: 100vh; }
+
+    header { background: var(--green); color: #fff; padding: 0 24px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+    .header-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 56px; }
+    header h1 { font-size: 1.1rem; font-weight: 600; }
+    nav { display: flex; gap: 4px; }
+    .tab-btn { background: transparent; border: none; color: rgba(255,255,255,.75); padding: 8px 16px; border-radius: var(--radius); cursor: pointer; font-size: .9rem; font-weight: 500; transition: background .15s, color .15s; }
+    .tab-btn:hover { background: rgba(255,255,255,.15); color: #fff; }
+    .tab-btn.active { background: rgba(255,255,255,.2); color: #fff; }
+
+    .tab-content { display: none; max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+    .tab-content.active { display: block; }
+
+    .toolbar { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+    .toolbar-left { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+    .toolbar label { display: flex; flex-direction: column; font-size: .78rem; font-weight: 600; color: var(--gray); gap: 4px; }
+    .toolbar input, .toolbar select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: .88rem; background: var(--white); }
+
+    .banner { background: #fff3cd; border: 1px solid #ffc107; border-radius: var(--radius); padding: 10px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; font-size: .88rem; }
+    .banner button { background: none; border: none; cursor: pointer; font-size: 1rem; color: var(--gray); }
+    .hidden { display: none !important; }
+
+    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+    .card { background: var(--white); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); border-left: 4px solid var(--border); transition: box-shadow .15s; }
+    .card:hover { box-shadow: 0 3px 10px rgba(0,0,0,.13); }
+    .card.concluida { opacity: .6; border-left-color: var(--green-light) !important; }
+    .card.prioridade-alta { border-left-color: var(--red); }
+    .card.prioridade-normal { border-left-color: #1976d2; }
+    .card.prioridade-baixa { border-left-color: var(--gray); }
+
+    .card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .card-titulo { font-weight: 600; font-size: .95rem; flex: 1; }
+    .card.concluida .card-titulo { text-decoration: line-through; }
+
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: .72rem; font-weight: 600; text-transform: uppercase; }
+    .badge-alta { background: #fde8e8; color: var(--red); }
+    .badge-normal { background: #e3f2fd; color: #1565c0; }
+    .badge-baixa { background: var(--gray-light); color: var(--gray); }
+    .badge-concluida { background: var(--green-bg); color: var(--green); }
+    .badge-pendente { background: #fff8e1; color: #f57f17; }
+    .badge-rolada { background: #f3e5f5; color: #6a1b9a; font-size: .68rem; }
+
+    .card-desc { font-size: .83rem; color: var(--gray); margin-bottom: 10px; line-height: 1.4; }
+    .card-meta { font-size: .78rem; color: var(--gray); display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
+    .card-meta span { display: flex; align-items: center; gap: 4px; }
+    .card-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+    .btn-icon { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: .78rem; color: var(--gray); transition: background .15s; }
+    .btn-icon:hover { background: var(--gray-light); }
+    .btn-icon.concluir { color: var(--green); border-color: var(--green-light); }
+    .btn-icon.concluir:hover { background: var(--green-bg); }
+    .btn-icon.reabrir { color: #1976d2; border-color: #90caf9; }
+    .btn-icon.reabrir:hover { background: #e3f2fd; }
+    .btn-icon.excluir { color: var(--red); border-color: #ef9a9a; }
+    .btn-icon.excluir:hover { background: #fde8e8; }
+
+    .empty-state { text-align: center; color: var(--gray); padding: 48px 0; font-size: .95rem; grid-column: 1/-1; }
+    .empty-state span { display: block; font-size: 2.5rem; margin-bottom: 8px; }
+
+    .table-wrap { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: var(--gray-light); padding: 10px 16px; text-align: left; font-size: .8rem; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: .5px; }
+    td { padding: 12px 16px; font-size: .88rem; border-top: 1px solid var(--border); }
+    tr:hover td { background: #fafafa; }
+    .td-actions { display: flex; gap: 6px; }
+
+    .btn { padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer; font-size: .88rem; font-weight: 600; transition: background .15s; }
+    .btn-primary { background: var(--green); color: #fff; }
+    .btn-primary:hover { background: #1b5e20; }
+    .btn-ghost { background: transparent; color: var(--gray); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: var(--gray-light); }
+
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; }
+    .modal { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+    .modal:not(.hidden) { pointer-events: all; }
+    .modal-box { background: var(--white); border-radius: 12px; padding: 28px; width: 100%; max-width: 480px; box-shadow: 0 8px 30px rgba(0,0,0,.2); }
+    .modal-box h2 { font-size: 1.1rem; margin-bottom: 20px; color: var(--green); }
+    .modal-box label { display: flex; flex-direction: column; font-size: .8rem; font-weight: 600; color: var(--gray); gap: 5px; margin-bottom: 14px; }
+    .modal-box input, .modal-box select, .modal-box textarea { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: .9rem; font-family: inherit; }
+    .modal-box input:focus, .modal-box select:focus, .modal-box textarea:focus { outline: 2px solid var(--green-light); border-color: transparent; }
+    .modal-box textarea { resize: vertical; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+    @media (max-width: 600px) {
+      .header-inner { flex-direction: column; height: auto; padding: 10px 0; gap: 8px; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <h1>📋 Controle de Atividades</h1>
+    <nav>
+      <button class="tab-btn active" data-tab="atividades">Atividades</button>
+      <button class="tab-btn" data-tab="consultores">Consultores</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ABA ATIVIDADES -->
+<main id="tab-atividades" class="tab-content active">
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <label>Data:<input type="date" id="filtroData"></label>
+      <label>Consultor:
+        <select id="filtroConsultor"><option value="">Todos</option></select>
+      </label>
+      <label>Status:
+        <select id="filtroStatus">
+          <option value="">Todos</option>
+          <option value="pendente">Pendente</option>
+          <option value="concluida">Concluída</option>
+        </select>
+      </label>
+    </div>
+    <button class="btn btn-primary" onclick="abrirModalAtividade()">+ Nova Atividade</button>
+  </div>
+  <div id="rolloverBanner" class="banner hidden">
+    ⚠️ Atividades pendentes de dias anteriores foram movidas para hoje automaticamente.
+    <button onclick="this.parentElement.classList.add('hidden')">✕</button>
+  </div>
+  <div id="listaAtividades" class="cards-grid"></div>
+</main>
+
+<!-- ABA CONSULTORES -->
+<main id="tab-consultores" class="tab-content">
+  <div class="toolbar">
+    <div class="toolbar-left"></div>
+    <button class="btn btn-primary" onclick="abrirModalConsultor()">+ Novo Consultor</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Nome</th><th>E-mail</th><th>Telefone</th><th></th></tr></thead>
+      <tbody id="tBodyConsultores"></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- MODAL ATIVIDADE -->
+<div id="modalAtividade" class="modal hidden">
+  <div class="modal-box">
+    <h2 id="modalAtividadeTitulo">Nova Atividade</h2>
+    <form id="formAtividade">
+      <input type="hidden" id="atividadeId">
+      <label>Título *<input type="text" id="atividadeTitulo" required></label>
+      <label>Descrição<textarea id="atividadeDescricao" rows="3"></textarea></label>
+      <div class="form-row">
+        <label>Data *<input type="date" id="atividadeData" required></label>
+        <label>Prioridade
+          <select id="atividadePrioridade">
+            <option value="baixa">Baixa</option>
+            <option value="normal" selected>Normal</option>
+            <option value="alta">Alta</option>
+          </select>
+        </label>
+      </div>
+      <label>Responsável
+        <select id="atividadeConsultor"><option value="">— Sem responsável —</option></select>
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="fecharModal('modalAtividade')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL CONSULTOR -->
+<div id="modalConsultor" class="modal hidden">
+  <div class="modal-box">
+    <h2 id="modalConsultorTitulo">Novo Consultor</h2>
+    <form id="formConsultor">
+      <input type="hidden" id="consultorId">
+      <label>Nome *<input type="text" id="consultorNome" required></label>
+      <label>E-mail<input type="email" id="consultorEmail"></label>
+      <label>Telefone<input type="tel" id="consultorTelefone"></label>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="fecharModal('modalConsultor')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="overlay" class="overlay hidden" onclick="fecharTodos()"></div>
+
+<script>
+// ── Storage ──────────────────────────────────────────────────
+function load() {
+  return {
+    consultores: JSON.parse(localStorage.getItem('ca_consultores') || '[]'),
+    atividades:  JSON.parse(localStorage.getItem('ca_atividades')  || '[]')
+  };
+}
+function save(db) {
+  localStorage.setItem('ca_consultores', JSON.stringify(db.consultores));
+  localStorage.setItem('ca_atividades',  JSON.stringify(db.atividades));
+}
+
+// ── Rollover ─────────────────────────────────────────────────
+function rollover() {
+  const db = load();
+  const hoje = hoje_str();
+  let changed = false;
+  db.atividades.forEach(a => {
+    if (a.status === 'pendente' && a.data < hoje) {
+      a.dataOriginal = a.dataOriginal || a.data;
+      a.data = hoje;
+      changed = true;
+    }
+  });
+  if (changed) {
+    save(db);
+    document.getElementById('rolloverBanner').classList.remove('hidden');
+  }
+}
+
+function hoje_str() {
+  return new Date().toISOString().split('T')[0];
+}
+
+// ── Init ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('filtroData').value = hoje_str();
+  document.getElementById('atividadeData').value = hoje_str();
+  rollover();
+  bindTabs();
+  bindFiltros();
+  bindForms();
+  popularSelects();
+  aplicarFiltros();
+});
+
+// ── Tabs ─────────────────────────────────────────────────────
+function bindTabs() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      if (btn.dataset.tab === 'consultores') renderConsultores();
+    });
+  });
+}
+
+// ── Filtros ──────────────────────────────────────────────────
+function bindFiltros() {
+  ['filtroData','filtroConsultor','filtroStatus'].forEach(id =>
+    document.getElementById(id).addEventListener('change', aplicarFiltros)
+  );
+}
+
+function aplicarFiltros() {
+  const db = load();
+  const data = document.getElementById('filtroData').value;
+  const cId  = document.getElementById('filtroConsultor').value;
+  const st   = document.getElementById('filtroStatus').value;
+  let lista  = db.atividades;
+  if (data) lista = lista.filter(a => a.data === data);
+  if (cId)  lista = lista.filter(a => a.consultorId === cId);
+  if (st)   lista = lista.filter(a => a.status === st);
+  renderAtividades(lista, db.consultores);
+}
+
+// ── Selects ──────────────────────────────────────────────────
+function popularSelects() {
+  const db = load();
+  ['filtroConsultor','atividadeConsultor'].forEach(selId => {
+    const sel = document.getElementById(selId);
+    const first = sel.options[0].cloneNode(true);
+    sel.innerHTML = '';
+    sel.appendChild(first);
+    db.consultores.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c.id; o.textContent = c.nome;
+      sel.appendChild(o);
+    });
+  });
+}
+
+// ── Render Atividades ────────────────────────────────────────
+function renderAtividades(lista, consultores) {
+  const el = document.getElementById('listaAtividades');
+  if (!lista.length) {
+    el.innerHTML = '<div class="empty-state"><span>📭</span>Nenhuma atividade encontrada.</div>';
+    return;
+  }
+  const ordem = { alta:0, normal:1, baixa:2 };
+  lista.sort((a,b) => {
+    if (a.status !== b.status) return a.status === 'pendente' ? -1 : 1;
+    return (ordem[a.prioridade]??1) - (ordem[b.prioridade]??1);
+  });
+  el.innerHTML = lista.map(a => {
+    const c = consultores.find(x => x.id === a.consultorId);
+    const rolada = a.dataOriginal ? `<span class="badge badge-rolada">↩ Rolada de ${fmtDate(a.dataOriginal)}</span> ` : '';
+    const desc = a.descricao ? `<p class="card-desc">${esc(a.descricao)}</p>` : '';
+    const acao = a.status === 'pendente'
+      ? `<button class="btn-icon concluir" onclick="concluir('${a.id}')">✓ Concluir</button>`
+      : `<button class="btn-icon reabrir"  onclick="reabrir('${a.id}')">↩ Reabrir</button>`;
+    return `<div class="card ${a.status} prioridade-${a.prioridade}">
+      <div class="card-header">
+        <span class="card-titulo">${esc(a.titulo)}</span>
+        <span class="badge badge-${a.prioridade}">${a.prioridade}</span>
+      </div>
+      ${desc}
+      <div class="card-meta">
+        <span>📅 ${fmtDate(a.data)}</span>
+        <span>👤 ${esc(c ? c.nome : '—')}</span>
+        <span>${rolada}<span class="badge badge-${a.status}">${a.status}</span></span>
+      </div>
+      <div class="card-actions">
+        ${acao}
+        <button class="btn-icon" onclick="editarAtividade('${a.id}')">✏️ Editar</button>
+        <button class="btn-icon excluir" onclick="excluirAtividade('${a.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Render Consultores ───────────────────────────────────────
+function renderConsultores() {
+  const db = load();
+  const tb = document.getElementById('tBodyConsultores');
+  if (!db.consultores.length) {
+    tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#888;padding:32px">Nenhum consultor cadastrado.</td></tr>';
+    return;
+  }
+  tb.innerHTML = db.consultores.map(c => `<tr>
+    <td>${esc(c.nome)}</td><td>${esc(c.email)}</td><td>${esc(c.telefone)}</td>
+    <td><div class="td-actions">
+      <button class="btn-icon" onclick="editarConsultor('${c.id}')">✏️ Editar</button>
+      <button class="btn-icon excluir" onclick="excluirConsultor('${c.id}')">🗑</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+// ── Ações ────────────────────────────────────────────────────
+function concluir(id) {
+  const db = load();
+  const a = db.atividades.find(x => x.id === id);
+  if (a) { a.status = 'concluida'; save(db); aplicarFiltros(); }
+}
+function reabrir(id) {
+  const db = load();
+  const a = db.atividades.find(x => x.id === id);
+  if (a) { a.status = 'pendente'; save(db); aplicarFiltros(); }
+}
+function excluirAtividade(id) {
+  if (!confirm('Excluir esta atividade?')) return;
+  const db = load();
+  db.atividades = db.atividades.filter(x => x.id !== id);
+  save(db); aplicarFiltros();
+}
+function editarAtividade(id) {
+  const db = load();
+  const a = db.atividades.find(x => x.id === id);
+  if (!a) return;
+  document.getElementById('atividadeId').value        = a.id;
+  document.getElementById('atividadeTitulo').value    = a.titulo;
+  document.getElementById('atividadeDescricao').value = a.descricao;
+  document.getElementById('atividadeData').value      = a.data;
+  document.getElementById('atividadePrioridade').value= a.prioridade;
+  document.getElementById('atividadeConsultor').value = a.consultorId || '';
+  document.getElementById('modalAtividadeTitulo').textContent = 'Editar Atividade';
+  abrirModal('modalAtividade');
+}
+function excluirConsultor(id) {
+  if (!confirm('Excluir este consultor?')) return;
+  const db = load();
+  db.consultores = db.consultores.filter(x => x.id !== id);
+  save(db); popularSelects(); renderConsultores();
+}
+function editarConsultor(id) {
+  const db = load();
+  const c = db.consultores.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('consultorId').value       = c.id;
+  document.getElementById('consultorNome').value     = c.nome;
+  document.getElementById('consultorEmail').value    = c.email;
+  document.getElementById('consultorTelefone').value = c.telefone;
+  document.getElementById('modalConsultorTitulo').textContent = 'Editar Consultor';
+  abrirModal('modalConsultor');
+}
+
+// ── Forms ────────────────────────────────────────────────────
+function bindForms() {
+  document.getElementById('formAtividade').addEventListener('submit', e => {
+    e.preventDefault();
+    const db  = load();
+    const id  = document.getElementById('atividadeId').value;
+    const payload = {
+      titulo:      document.getElementById('atividadeTitulo').value,
+      descricao:   document.getElementById('atividadeDescricao').value,
+      data:        document.getElementById('atividadeData').value,
+      prioridade:  document.getElementById('atividadePrioridade').value,
+      consultorId: document.getElementById('atividadeConsultor').value || null
+    };
+    if (id) {
+      const idx = db.atividades.findIndex(x => x.id === id);
+      db.atividades[idx] = { ...db.atividades[idx], ...payload };
+    } else {
+      db.atividades.push({ id: Date.now().toString(), status: 'pendente', dataOriginal: null, criadoEm: new Date().toISOString(), ...payload });
+    }
+    save(db); fecharModal('modalAtividade'); aplicarFiltros();
+  });
+
+  document.getElementById('formConsultor').addEventListener('submit', e => {
+    e.preventDefault();
+    const db = load();
+    const id = document.getElementById('consultorId').value;
+    const payload = {
+      nome:     document.getElementById('consultorNome').value,
+      email:    document.getElementById('consultorEmail').value,
+      telefone: document.getElementById('consultorTelefone').value
+    };
+    if (id) {
+      const idx = db.consultores.findIndex(x => x.id === id);
+      db.consultores[idx] = { ...db.consultores[idx], ...payload };
+    } else {
+      db.consultores.push({ id: Date.now().toString(), ...payload });
+    }
+    save(db); fecharModal('modalConsultor'); popularSelects(); renderConsultores();
+  });
+}
+
+// ── Modais ───────────────────────────────────────────────────
+function abrirModalAtividade() {
+  document.getElementById('formAtividade').reset();
+  document.getElementById('atividadeId').value = '';
+  document.getElementById('atividadeData').value = hoje_str();
+  document.getElementById('modalAtividadeTitulo').textContent = 'Nova Atividade';
+  popularSelects();
+  abrirModal('modalAtividade');
+}
+function abrirModalConsultor() {
+  document.getElementById('formConsultor').reset();
+  document.getElementById('consultorId').value = '';
+  document.getElementById('modalConsultorTitulo').textContent = 'Novo Consultor';
+  abrirModal('modalConsultor');
+}
+function abrirModal(id) {
+  document.getElementById(id).classList.remove('hidden');
+  document.getElementById('overlay').classList.remove('hidden');
+}
+function fecharModal(id) {
+  document.getElementById(id).classList.add('hidden');
+  document.getElementById('overlay').classList.add('hidden');
+}
+function fecharTodos() {
+  ['modalAtividade','modalConsultor'].forEach(id => document.getElementById(id).classList.add('hidden'));
+  document.getElementById('overlay').classList.add('hidden');
+}
+
+// ── Helpers ──────────────────────────────────────────────────
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+function esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
