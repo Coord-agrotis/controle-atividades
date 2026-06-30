@@ -34,6 +34,18 @@
     .banner button { background: none; border: none; cursor: pointer; font-size: 1rem; color: var(--gray); }
     .hidden { display: none !important; }
 
+    /* ── Toggle de visualização ── */
+    .view-toggle { display: flex; gap: 2px; background: var(--gray-light); border-radius: 6px; padding: 2px; }
+    .view-btn { background: none; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 1rem; color: var(--gray); transition: background .15s, color .15s; line-height: 1; }
+    .view-btn.active { background: var(--white); color: var(--green); box-shadow: var(--shadow); }
+
+    /* ── Filtro de data ── */
+    .date-mode-toggle { display: flex; gap: 6px; align-items: center; }
+    .date-mode-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: .75rem; font-weight: 600; color: var(--gray); transition: background .15s, color .15s, border-color .15s; }
+    .date-mode-btn.active { background: var(--green); color: #fff; border-color: var(--green); }
+    .date-range { display: flex; gap: 6px; align-items: center; font-size: .78rem; color: var(--gray); font-weight: 600; }
+    .date-range input { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: .88rem; background: var(--white); }
+
     .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
     .card { background: var(--white); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); border-left: 4px solid var(--border); transition: box-shadow .15s; }
     .card:hover { box-shadow: 0 3px 10px rgba(0,0,0,.13); }
@@ -70,6 +82,20 @@
 
     .empty-state { text-align: center; color: var(--gray); padding: 48px 0; font-size: .95rem; grid-column: 1/-1; }
     .empty-state span { display: block; font-size: 2.5rem; margin-bottom: 8px; }
+
+    /* ── Visão lista ── */
+    .list-view { display: flex; flex-direction: column; gap: 6px; }
+    .list-item { background: var(--white); border-radius: var(--radius); padding: 12px 16px; box-shadow: var(--shadow); border-left: 4px solid var(--border); display: flex; align-items: center; gap: 12px; }
+    .list-item.concluida { opacity: .6; border-left-color: var(--green-light) !important; }
+    .list-item.prioridade-alta  { border-left-color: var(--red); }
+    .list-item.prioridade-normal{ border-left-color: #1976d2; }
+    .list-item.prioridade-baixa { border-left-color: var(--gray); }
+    .list-item-main { flex: 1; min-width: 0; }
+    .list-item-titulo { font-weight: 600; font-size: .92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .list-item.concluida .list-item-titulo { text-decoration: line-through; }
+    .list-item-sub { font-size: .78rem; color: var(--gray); display: flex; gap: 12px; margin-top: 2px; flex-wrap: wrap; }
+    .list-item-badges { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+    .list-item-actions { display: flex; gap: 4px; flex-shrink: 0; }
 
     .table-wrap { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
     table { width: 100%; border-collapse: collapse; }
@@ -118,7 +144,21 @@
 <main id="tab-atividades" class="tab-content active">
   <div class="toolbar">
     <div class="toolbar-left">
-      <label>Data:<input type="date" id="filtroData"></label>
+      <label>Período
+        <div class="date-mode-toggle">
+          <button class="date-mode-btn active" id="btnDataUnica" onclick="setDateMode('unica')">Dia</button>
+          <button class="date-mode-btn" id="btnDataPeriodo" onclick="setDateMode('periodo')">Período</button>
+        </div>
+      </label>
+      <div id="dateUnica">
+        <label>Data<input type="date" id="filtroData"></label>
+      </div>
+      <div id="datePeriodo" class="hidden">
+        <div class="date-range">
+          <label>De<input type="date" id="filtroDataDe"></label>
+          <label>Até<input type="date" id="filtroDataAte"></label>
+        </div>
+      </div>
       <label>Consultor:
         <select id="filtroConsultor"><option value="">Todos</option></select>
       </label>
@@ -130,7 +170,13 @@
         </select>
       </label>
     </div>
-    <button class="btn btn-primary" onclick="abrirModalAtividade()">+ Nova Atividade</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="view-toggle">
+        <button class="view-btn active" id="btnCards" title="Cartões" onclick="setView('cards')">⊞</button>
+        <button class="view-btn" id="btnLista" title="Lista" onclick="setView('lista')">☰</button>
+      </div>
+      <button class="btn btn-primary" onclick="abrirModalAtividade()">+ Nova Atividade</button>
+    </div>
   </div>
   <div id="rolloverBanner" class="banner hidden">
     ⚠️ Atividades pendentes de dias anteriores foram movidas para hoje automaticamente.
@@ -236,10 +282,33 @@ function hoje_str() {
   return new Date().toISOString().split('T')[0];
 }
 
+// ── View mode ────────────────────────────────────────────────
+let viewMode = 'cards';
+let dateMode = 'unica';
+
+function setView(mode) {
+  viewMode = mode;
+  document.getElementById('btnCards').classList.toggle('active', mode === 'cards');
+  document.getElementById('btnLista').classList.toggle('active', mode === 'lista');
+  aplicarFiltros();
+}
+
+function setDateMode(mode) {
+  dateMode = mode;
+  document.getElementById('btnDataUnica').classList.toggle('active', mode === 'unica');
+  document.getElementById('btnDataPeriodo').classList.toggle('active', mode === 'periodo');
+  document.getElementById('dateUnica').classList.toggle('hidden', mode !== 'unica');
+  document.getElementById('datePeriodo').classList.toggle('hidden', mode !== 'periodo');
+  aplicarFiltros();
+}
+
 // ── Init ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('filtroData').value = hoje_str();
-  document.getElementById('atividadeData').value = hoje_str();
+  const hoje = hoje_str();
+  document.getElementById('filtroData').value    = hoje;
+  document.getElementById('filtroDataDe').value  = hoje;
+  document.getElementById('filtroDataAte').value = hoje;
+  document.getElementById('atividadeData').value = hoje;
   rollover();
   bindTabs();
   bindFiltros();
@@ -263,20 +332,29 @@ function bindTabs() {
 
 // ── Filtros ──────────────────────────────────────────────────
 function bindFiltros() {
-  ['filtroData','filtroConsultor','filtroStatus'].forEach(id =>
+  ['filtroData','filtroDataDe','filtroDataAte','filtroConsultor','filtroStatus'].forEach(id =>
     document.getElementById(id).addEventListener('change', aplicarFiltros)
   );
 }
 
 function aplicarFiltros() {
-  const db = load();
-  const data = document.getElementById('filtroData').value;
-  const cId  = document.getElementById('filtroConsultor').value;
-  const st   = document.getElementById('filtroStatus').value;
-  let lista  = db.atividades;
-  if (data) lista = lista.filter(a => a.data === data);
-  if (cId)  lista = lista.filter(a => a.consultorId === cId);
-  if (st)   lista = lista.filter(a => a.status === st);
+  const db  = load();
+  const cId = document.getElementById('filtroConsultor').value;
+  const st  = document.getElementById('filtroStatus').value;
+  let lista = db.atividades;
+
+  if (dateMode === 'unica') {
+    const data = document.getElementById('filtroData').value;
+    if (data) lista = lista.filter(a => a.data === data);
+  } else {
+    const de  = document.getElementById('filtroDataDe').value;
+    const ate = document.getElementById('filtroDataAte').value;
+    if (de)  lista = lista.filter(a => a.data >= de);
+    if (ate) lista = lista.filter(a => a.data <= ate);
+  }
+
+  if (cId) lista = lista.filter(a => a.consultorId === cId);
+  if (st)  lista = lista.filter(a => a.status === st);
   renderAtividades(lista, db.consultores);
 }
 
@@ -300,6 +378,7 @@ function popularSelects() {
 function renderAtividades(lista, consultores) {
   const el = document.getElementById('listaAtividades');
   if (!lista.length) {
+    el.className = 'cards-grid';
     el.innerHTML = '<div class="empty-state"><span>📭</span>Nenhuma atividade encontrada.</div>';
     return;
   }
@@ -308,31 +387,64 @@ function renderAtividades(lista, consultores) {
     if (a.status !== b.status) return a.status === 'pendente' ? -1 : 1;
     return (ordem[a.prioridade]??1) - (ordem[b.prioridade]??1);
   });
-  el.innerHTML = lista.map(a => {
-    const c = consultores.find(x => x.id === a.consultorId);
-    const rolada = a.dataOriginal ? `<span class="badge badge-rolada">↩ Rolada de ${fmtDate(a.dataOriginal)}</span> ` : '';
-    const desc = a.descricao ? `<p class="card-desc">${esc(a.descricao)}</p>` : '';
-    const acao = a.status === 'pendente'
-      ? `<button class="btn-icon concluir" onclick="concluir('${a.id}')">✓ Concluir</button>`
-      : `<button class="btn-icon reabrir"  onclick="reabrir('${a.id}')">↩ Reabrir</button>`;
-    return `<div class="card ${a.status} prioridade-${a.prioridade}">
-      <div class="card-header">
-        <span class="card-titulo">${esc(a.titulo)}</span>
-        <span class="badge badge-${a.prioridade}">${a.prioridade}</span>
-      </div>
-      ${desc}
-      <div class="card-meta">
-        <span>📅 ${fmtDate(a.data)}</span>
-        <span>👤 ${esc(c ? c.nome : '—')}</span>
-        <span>${rolada}<span class="badge badge-${a.status}">${a.status}</span></span>
-      </div>
-      <div class="card-actions">
-        ${acao}
-        <button class="btn-icon" onclick="editarAtividade('${a.id}')">✏️ Editar</button>
-        <button class="btn-icon excluir" onclick="excluirAtividade('${a.id}')">🗑</button>
-      </div>
-    </div>`;
-  }).join('');
+
+  if (viewMode === 'lista') {
+    el.className = 'list-view';
+    el.innerHTML = lista.map(a => {
+      const c = consultores.find(x => x.id === a.consultorId);
+      const acao = a.status === 'pendente'
+        ? `<button class="btn-icon concluir" onclick="concluir('${a.id}')">✓</button>`
+        : `<button class="btn-icon reabrir"  onclick="reabrir('${a.id}')">↩</button>`;
+      const rolada = a.dataOriginal ? `<span class="badge badge-rolada">↩ ${fmtDate(a.dataOriginal)}</span>` : '';
+      return `<div class="list-item ${a.status} prioridade-${a.prioridade}">
+        <div class="list-item-main">
+          <div class="list-item-titulo">${esc(a.titulo)}</div>
+          <div class="list-item-sub">
+            <span>📅 ${fmtDate(a.data)}</span>
+            <span>👤 ${esc(c ? c.nome : '—')}</span>
+            ${a.descricao ? `<span>${esc(a.descricao)}</span>` : ''}
+          </div>
+        </div>
+        <div class="list-item-badges">
+          ${rolada}
+          <span class="badge badge-${a.prioridade}">${a.prioridade}</span>
+          <span class="badge badge-${a.status}">${a.status}</span>
+        </div>
+        <div class="list-item-actions">
+          ${acao}
+          <button class="btn-icon" onclick="editarAtividade('${a.id}')">✏️</button>
+          <button class="btn-icon excluir" onclick="excluirAtividade('${a.id}')">🗑</button>
+        </div>
+      </div>`;
+    }).join('');
+  } else {
+    el.className = 'cards-grid';
+    el.innerHTML = lista.map(a => {
+      const c = consultores.find(x => x.id === a.consultorId);
+      const rolada = a.dataOriginal ? `<span class="badge badge-rolada">↩ Rolada de ${fmtDate(a.dataOriginal)}</span> ` : '';
+      const desc = a.descricao ? `<p class="card-desc">${esc(a.descricao)}</p>` : '';
+      const acao = a.status === 'pendente'
+        ? `<button class="btn-icon concluir" onclick="concluir('${a.id}')">✓ Concluir</button>`
+        : `<button class="btn-icon reabrir"  onclick="reabrir('${a.id}')">↩ Reabrir</button>`;
+      return `<div class="card ${a.status} prioridade-${a.prioridade}">
+        <div class="card-header">
+          <span class="card-titulo">${esc(a.titulo)}</span>
+          <span class="badge badge-${a.prioridade}">${a.prioridade}</span>
+        </div>
+        ${desc}
+        <div class="card-meta">
+          <span>📅 ${fmtDate(a.data)}</span>
+          <span>👤 ${esc(c ? c.nome : '—')}</span>
+          <span>${rolada}<span class="badge badge-${a.status}">${a.status}</span></span>
+        </div>
+        <div class="card-actions">
+          ${acao}
+          <button class="btn-icon" onclick="editarAtividade('${a.id}')">✏️ Editar</button>
+          <button class="btn-icon excluir" onclick="excluirAtividade('${a.id}')">🗑</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
 }
 
 // ── Render Consultores ───────────────────────────────────────
