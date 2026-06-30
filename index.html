@@ -373,6 +373,7 @@
       <div class="detalhe-field"><span class="detalhe-label">👤 Responsável</span><span class="detalhe-value" id="detalhePessoa"></span></div>
       <div class="detalhe-field"><span class="detalhe-label">🏢 Cliente</span><span class="detalhe-value" id="detalheCliente"></span></div>
       <div class="detalhe-field"><span class="detalhe-label">🕒 Criado em</span><span class="detalhe-value" id="detalheCriado"></span></div>
+      <div class="detalhe-field" id="detalheConclusaoField"><span class="detalhe-label">✅ Concluído em</span><span class="detalhe-value" id="detalheConclusao"></span></div>
       <div class="detalhe-field hidden" id="detalheRoladaField"><span class="detalhe-label">↩ Data original</span><span class="detalhe-value" id="detalheOriginal"></span></div>
     </div>
     <div class="modal-actions" style="margin-top:20px">
@@ -726,11 +727,11 @@ function renderClientes() {
 // ══ Ações Atividades ══════════════════════════════════════════
 function concluir(id) {
   const db = load(); const a = db.atividades.find(x => x.id === id);
-  if (a) { a.status = 'concluida'; save(db); aplicarFiltros(); }
+  if (a) { a.status = 'concluida'; a.concluidoEm = new Date().toISOString(); save(db); aplicarFiltros(); }
 }
 function reabrir(id) {
   const db = load(); const a = db.atividades.find(x => x.id === id);
-  if (a) { a.status = 'pendente'; save(db); aplicarFiltros(); }
+  if (a) { a.status = 'pendente'; a.concluidoEm = null; save(db); aplicarFiltros(); }
 }
 function excluirAtividade(id) {
   if (!confirm('Excluir esta atividade?')) return;
@@ -803,7 +804,9 @@ function abrirDetalhe(id) {
   document.getElementById('detalheData').textContent   = fmtDate(a.data);
   document.getElementById('detalhePessoa').innerHTML   = p ? `${esc(p.nome)} <span class="badge badge-${p.tipo}">${p.tipo}</span>` : '—';
   document.getElementById('detalheCliente').textContent = c ? c.nome : '—';
-  document.getElementById('detalheCriado').textContent  = a.criadoEm ? fmtDateTime(a.criadoEm) : '—';
+  document.getElementById('detalheCriado').textContent    = a.criadoEm    ? fmtDateTime(a.criadoEm)    : '—';
+  document.getElementById('detalheConclusao').textContent = a.concluidoEm  ? fmtDateTime(a.concluidoEm) : '—';
+  document.getElementById('detalheConclusaoField').classList.toggle('hidden', !a.concluidoEm);
 
   const bp = document.getElementById('detalheBadgePrioridade');
   bp.textContent = a.prioridade; bp.className = `badge badge-${a.prioridade}`;
