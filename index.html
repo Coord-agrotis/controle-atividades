@@ -151,6 +151,29 @@
     .detalhe-label { font-size: .7rem; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: .4px; }
     .detalhe-value { font-size: .88rem; }
 
+    /* ── Agenda ── */
+    .agenda-config-box { background: var(--white); border-radius: 12px; box-shadow: var(--shadow); max-width: 620px; margin: 0 auto; padding: 32px; }
+    .agenda-config-box h2 { font-size: 1.15rem; margin-bottom: 8px; }
+    .agenda-config-box p  { font-size: .88rem; color: var(--gray); margin-bottom: 20px; }
+    .agenda-steps { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; background: var(--gray-light); border-radius: var(--radius); padding: 14px 16px; }
+    .step { display: flex; align-items: center; gap: 10px; font-size: .85rem; }
+    .step-n { background: var(--green); color: #fff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; flex-shrink: 0; }
+    .agenda-form label { display: flex; flex-direction: column; font-size: .8rem; font-weight: 600; color: var(--gray); gap: 5px; margin-bottom: 12px; }
+    .agenda-form input  { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: .9rem; font-family: inherit; }
+    .agenda-form input:focus { outline: 2px solid var(--green-light); border-color: transparent; }
+
+    .agenda-day { margin-bottom: 20px; }
+    .agenda-day-header { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--gray); padding: 4px 0 8px; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+    .agenda-day-header.hoje-label { color: var(--green); }
+    .evento-card { background: var(--white); border-radius: var(--radius); padding: 12px 16px; box-shadow: var(--shadow); border-left: 4px solid #4285f4; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .evento-titulo { font-weight: 600; font-size: .92rem; }
+    .evento-meta   { font-size: .78rem; color: var(--gray); margin-top: 3px; }
+    .evento-hora   { font-size: .82rem; font-weight: 600; color: #4285f4; white-space: nowrap; flex-shrink: 0; }
+    .evento-dia-todo { background: #e8f0fe; color: #1a73e8; font-size: .72rem; font-weight: 600; padding: 2px 8px; border-radius: 99px; }
+    .agenda-empty  { text-align: center; color: var(--gray); padding: 40px 0; font-size: .95rem; }
+    .agenda-empty span { display: block; font-size: 2rem; margin-bottom: 8px; }
+    .agenda-loading { text-align: center; color: var(--gray); padding: 40px 0; font-size: .9rem; }
+
     @media (max-width: 640px) {
       .header-inner { flex-direction: column; height: auto; padding: 10px 0; gap: 8px; }
       .form-row, .detalhe-grid { grid-template-columns: 1fr; }
@@ -166,6 +189,7 @@
       <button class="tab-btn active" data-tab="atividades">Atividades</button>
       <button class="tab-btn" data-tab="pessoas">Pessoas</button>
       <button class="tab-btn" data-tab="clientes">Clientes</button>
+      <button class="tab-btn" data-tab="agenda">📅 Agenda</button>
     </nav>
   </div>
 </header>
@@ -360,6 +384,56 @@
   </div>
 </div>
 
+<!-- ══ ABA AGENDA ══════════════════════════════════════════ -->
+<main id="tab-agenda" class="tab-content">
+
+  <!-- Configuração -->
+  <div id="agendaConfig" class="agenda-config-box">
+    <div class="agenda-config-inner">
+      <h2>🗓 Conectar Google Calendar</h2>
+      <p>Cole abaixo o link secreto ICS da sua agenda do Google Calendar.</p>
+      <div class="agenda-steps">
+        <div class="step"><span class="step-n">1</span>Acesse <strong>calendar.google.com</strong></div>
+        <div class="step"><span class="step-n">2</span>Clique em ⚙️ → <strong>Configurações</strong></div>
+        <div class="step"><span class="step-n">3</span>No menu esquerdo, clique no nome da sua agenda</div>
+        <div class="step"><span class="step-n">4</span>Role até <strong>"Endereço secreto no formato iCal"</strong> e copie o link</div>
+      </div>
+      <div class="agenda-form">
+        <label>Seu nome<input type="text" id="agendaNome" placeholder="Ex: Daniel"></label>
+        <label>Link ICS do Google Calendar<input type="text" id="agendaIcsUrl" placeholder="https://calendar.google.com/calendar/ical/..."></label>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="btn btn-primary" onclick="salvarAgendaConfig()">Conectar</button>
+          <span id="agendaConfigStatus" style="font-size:.85rem;align-self:center;color:var(--gray)"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Visualização -->
+  <div id="agendaView" class="hidden">
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span id="agendaUserInfo" style="font-size:.9rem;color:var(--gray)"></span>
+          <button class="btn btn-ghost" style="font-size:.78rem;padding:4px 10px" onclick="mostrarConfigAgenda()">⚙ Alterar</button>
+        </div>
+        <label>Período
+          <div class="date-mode-toggle">
+            <button class="date-mode-btn active" id="agBtnHoje"    onclick="setAgendaPeriodo('hoje')">Hoje</button>
+            <button class="date-mode-btn"         id="agBtnSemana"  onclick="setAgendaPeriodo('semana')">7 dias</button>
+            <button class="date-mode-btn"         id="agBtnMes"     onclick="setAgendaPeriodo('mes')">30 dias</button>
+          </div>
+        </label>
+      </div>
+      <button class="btn btn-primary" onclick="sincronizarAgenda()">🔄 Sincronizar</button>
+    </div>
+
+    <div id="agendaStatus" class="banner hidden"></div>
+
+    <div id="agendaEventos"></div>
+  </div>
+</main>
+
 <div id="overlay" class="overlay hidden" onclick="fecharTodos()"></div>
 
 <script>
@@ -437,8 +511,9 @@ function bindTabs() {
       document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-      if (btn.dataset.tab === 'pessoas')   renderPessoas();
-      if (btn.dataset.tab === 'clientes')  renderClientes();
+      if (btn.dataset.tab === 'pessoas')  renderPessoas();
+      if (btn.dataset.tab === 'clientes') renderClientes();
+      if (btn.dataset.tab === 'agenda')   iniciarAgenda();
     });
   });
 }
@@ -845,10 +920,181 @@ function fecharModal(id) {
   document.getElementById(id).classList.add('hidden');
   document.getElementById('overlay').classList.add('hidden');
 }
+function iniciarAgenda() {
+  const url = localStorage.getItem('ca_agenda_ics');
+  if (url) {
+    mostrarViewAgenda();
+    if (!agendaEventosCache.length) sincronizarAgenda();
+    else renderAgendaEventos();
+  } else {
+    mostrarConfigAgenda();
+  }
+}
+
 function fecharTodos() {
   ['modalAtividade','modalPessoa','modalCliente','modalDetalhe'].forEach(id =>
     document.getElementById(id).classList.add('hidden'));
   document.getElementById('overlay').classList.add('hidden');
+}
+
+// ══ Agenda / Google Calendar ICS ═════════════════════════════
+let agendaPeriodo = 'hoje';
+let agendaEventosCache = [];
+
+function salvarAgendaConfig() {
+  const nome = document.getElementById('agendaNome').value.trim();
+  const url  = document.getElementById('agendaIcsUrl').value.trim();
+  if (!url) { document.getElementById('agendaConfigStatus').textContent = '⚠ Cole o link ICS.'; return; }
+  if (!url.includes('calendar.google.com') && !url.includes('.ics')) {
+    document.getElementById('agendaConfigStatus').textContent = '⚠ Link não parece ser um ICS válido.'; return;
+  }
+  localStorage.setItem('ca_agenda_nome', nome);
+  localStorage.setItem('ca_agenda_ics',  url);
+  mostrarViewAgenda();
+  sincronizarAgenda();
+}
+
+function mostrarConfigAgenda() {
+  document.getElementById('agendaConfig').classList.remove('hidden');
+  document.getElementById('agendaView').classList.add('hidden');
+  document.getElementById('agendaNome').value    = localStorage.getItem('ca_agenda_nome') || '';
+  document.getElementById('agendaIcsUrl').value  = localStorage.getItem('ca_agenda_ics')  || '';
+}
+
+function mostrarViewAgenda() {
+  const nome = localStorage.getItem('ca_agenda_nome') || '';
+  document.getElementById('agendaConfig').classList.add('hidden');
+  document.getElementById('agendaView').classList.remove('hidden');
+  document.getElementById('agendaUserInfo').textContent = nome ? `👤 ${nome}` : '';
+}
+
+function setAgendaPeriodo(p) {
+  agendaPeriodo = p;
+  ['agBtnHoje','agBtnSemana','agBtnMes'].forEach(id => document.getElementById(id).classList.remove('active'));
+  const map = { hoje:'agBtnHoje', semana:'agBtnSemana', mes:'agBtnMes' };
+  document.getElementById(map[p]).classList.add('active');
+  renderAgendaEventos();
+}
+
+async function sincronizarAgenda() {
+  const url = localStorage.getItem('ca_agenda_ics');
+  if (!url) return;
+
+  const el = document.getElementById('agendaEventos');
+  el.innerHTML = '<div class="agenda-loading">🔄 Buscando eventos...</div>';
+  setAgendaBanner('');
+
+  // Usa proxy CORS público para contornar restrição de arquivo local
+  const proxy = 'https://corsproxy.io/?' + encodeURIComponent(url);
+  try {
+    const res = await fetch(proxy);
+    if (!res.ok) throw new Error('Falha ao buscar o calendário.');
+    const text = await res.text();
+    agendaEventosCache = parseICS(text);
+    renderAgendaEventos();
+  } catch (err) {
+    el.innerHTML = '';
+    setAgendaBanner('❌ Não foi possível buscar o calendário. Verifique o link ICS e sua conexão com a internet.');
+  }
+}
+
+function parseICS(text) {
+  const events = [];
+  const lines  = text.replace(/\r\n /g, '').replace(/\r\n\t/g, '').split(/\r\n|\n/);
+  let ev = null;
+  lines.forEach(line => {
+    if (line === 'BEGIN:VEVENT') { ev = {}; return; }
+    if (line === 'END:VEVENT') { if (ev) events.push(ev); ev = null; return; }
+    if (!ev) return;
+    const sep = line.indexOf(':');
+    if (sep === -1) return;
+    const key = line.substring(0, sep).split(';')[0].toUpperCase();
+    const val = line.substring(sep + 1);
+    if (key === 'SUMMARY')     ev.titulo    = val.replace(/\\,/g,',').replace(/\\n/g,' ');
+    if (key === 'DESCRIPTION') ev.desc      = val.replace(/\\,/g,',').replace(/\\n/g,'\n').replace(/\\;/g,';');
+    if (key === 'LOCATION')    ev.local     = val.replace(/\\,/g,',');
+    if (key === 'DTSTART')     { ev.inicio  = parseICSDate(line.substring(sep+1), line.substring(0,sep)); ev.diaTodo = !line.includes('T'); }
+    if (key === 'DTEND')       ev.fim       = parseICSDate(line.substring(sep+1), line.substring(0,sep));
+  });
+  return events.filter(e => e.titulo && e.inicio);
+}
+
+function parseICSDate(val, keyFull) {
+  val = val.trim();
+  // DATE only: 20240615
+  if (/^\d{8}$/.test(val)) {
+    return new Date(+val.substr(0,4), +val.substr(4,2)-1, +val.substr(6,2));
+  }
+  // DATETIME UTC: 20240615T140000Z
+  if (val.endsWith('Z')) {
+    return new Date(Date.UTC(+val.substr(0,4),+val.substr(4,2)-1,+val.substr(6,2),+val.substr(9,2),+val.substr(11,2),+val.substr(13,2)));
+  }
+  // DATETIME local: 20240615T140000
+  if (/^\d{15}T?/.test(val) || /^\d{8}T\d{6}$/.test(val)) {
+    return new Date(+val.substr(0,4),+val.substr(4,2)-1,+val.substr(6,2),+val.substr(9,2),+val.substr(11,2),+val.substr(13,2));
+  }
+  return new Date(val);
+}
+
+function renderAgendaEventos() {
+  const el = document.getElementById('agendaEventos');
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  let ate = new Date(hoje);
+  if (agendaPeriodo === 'semana') ate.setDate(ate.getDate() + 6);
+  else if (agendaPeriodo === 'mes') ate.setDate(ate.getDate() + 29);
+
+  const filtrados = agendaEventosCache
+    .filter(e => {
+      const d = new Date(e.inicio); d.setHours(0,0,0,0);
+      return d >= hoje && d <= ate;
+    })
+    .sort((a,b) => a.inicio - b.inicio);
+
+  if (!filtrados.length) {
+    el.innerHTML = '<div class="agenda-empty"><span>📭</span>Nenhum evento no período.</div>';
+    return;
+  }
+
+  // Agrupar por dia
+  const grupos = {};
+  filtrados.forEach(e => {
+    const key = e.inicio.toISOString().split('T')[0];
+    if (!grupos[key]) grupos[key] = [];
+    grupos[key].push(e);
+  });
+
+  const hojeStr = hoje.toISOString().split('T')[0];
+  el.innerHTML = Object.entries(grupos).map(([dia, evs]) => {
+    const d = new Date(dia + 'T12:00:00');
+    const label = dia === hojeStr
+      ? 'Hoje — ' + d.toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' })
+      : d.toLocaleDateString('pt-BR', { weekday:'long', day:'numeric', month:'long' });
+    const isHoje = dia === hojeStr;
+    const cards = evs.map(e => {
+      const hora = e.diaTodo
+        ? '<span class="evento-dia-todo">Dia todo</span>'
+        : `<span class="evento-hora">${e.inicio.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>`;
+      const local = e.local ? `<span>📍 ${esc(e.local)}</span>` : '';
+      const desc  = e.desc  ? `<span style="margin-top:2px;display:block">${esc(e.desc.substring(0,120))}${e.desc.length>120?'…':''}</span>` : '';
+      return `<div class="evento-card">
+        <div>
+          <div class="evento-titulo">${esc(e.titulo)}</div>
+          <div class="evento-meta">${local}${desc}</div>
+        </div>
+        ${hora}
+      </div>`;
+    }).join('');
+    return `<div class="agenda-day">
+      <div class="agenda-day-header ${isHoje?'hoje-label':''}">${label}</div>
+      ${cards}
+    </div>`;
+  }).join('');
+}
+
+function setAgendaBanner(msg) {
+  const el = document.getElementById('agendaStatus');
+  if (msg) { el.textContent = msg; el.classList.remove('hidden'); }
+  else el.classList.add('hidden');
 }
 
 // ══ Helpers ══════════════════════════════════════════════════
