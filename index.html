@@ -122,9 +122,24 @@
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 
+    /* ── Modal detalhe ── */
+    .modal-detalhe-box { max-width: 520px; }
+    .detalhe-header { display: flex; justify-content: space-between; align-items: center; }
+    .detalhe-close { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: var(--gray); padding: 4px 8px; border-radius: 4px; }
+    .detalhe-close:hover { background: var(--gray-light); }
+    .detalhe-desc { font-size: .9rem; color: var(--gray); line-height: 1.6; margin-bottom: 16px; white-space: pre-wrap; }
+    .detalhe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: var(--gray-light); border-radius: var(--radius); padding: 14px; }
+    .detalhe-field { display: flex; flex-direction: column; gap: 3px; }
+    .detalhe-label { font-size: .72rem; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: .4px; }
+
+    /* ── Lista clicável ── */
+    .list-item { cursor: pointer; }
+    .list-item:hover { background: #fafffe; }
+
     @media (max-width: 600px) {
       .header-inner { flex-direction: column; height: auto; padding: 10px 0; gap: 8px; }
       .form-row { grid-template-columns: 1fr; }
+      .detalhe-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -242,6 +257,34 @@
         <button type="submit" class="btn btn-primary">Salvar</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- MODAL DETALHE -->
+<div id="modalDetalhe" class="modal hidden">
+  <div class="modal-box modal-detalhe-box">
+    <div class="detalhe-header">
+      <div>
+        <span id="detalheBadgePrioridade" class="badge"></span>
+        <span id="detalheBadgeStatus" class="badge" style="margin-left:4px"></span>
+        <span id="detalheBadgeRolada" class="badge badge-rolada" style="margin-left:4px"></span>
+      </div>
+      <button class="detalhe-close" onclick="fecharModal('modalDetalhe')">✕</button>
+    </div>
+    <h2 id="detalheTitulo" style="margin:12px 0 4px;font-size:1.2rem;color:#1a1a1a"></h2>
+    <div id="detalheDesc" class="detalhe-desc"></div>
+    <div class="detalhe-grid">
+      <div class="detalhe-field"><span class="detalhe-label">📅 Data</span><span id="detalheData"></span></div>
+      <div class="detalhe-field"><span class="detalhe-label">👤 Responsável</span><span id="detalheConsultor"></span></div>
+      <div class="detalhe-field"><span class="detalhe-label">🕒 Criado em</span><span id="detalheCriado"></span></div>
+      <div id="detalheRoladaField" class="detalhe-field hidden"><span class="detalhe-label">↩ Data original</span><span id="detalheOriginal"></span></div>
+    </div>
+    <div class="modal-actions" style="margin-top:20px">
+      <button id="detalheBtnReabrir" class="btn btn-ghost hidden" onclick="reabrirDetalhe()">↩ Reabrir</button>
+      <button id="detalheBtnConcluir" class="btn btn-ghost" style="color:var(--green);border-color:var(--green-light)" onclick="concluirDetalhe()">✓ Concluir</button>
+      <button id="detalheBtnEditar" class="btn btn-ghost" onclick="editarDetalhe()">✏️ Editar</button>
+      <button class="btn btn-primary" onclick="fecharModal('modalDetalhe')">Fechar</button>
+    </div>
   </div>
 </div>
 
@@ -396,13 +439,13 @@ function renderAtividades(lista, consultores) {
         ? `<button class="btn-icon concluir" onclick="concluir('${a.id}')">✓</button>`
         : `<button class="btn-icon reabrir"  onclick="reabrir('${a.id}')">↩</button>`;
       const rolada = a.dataOriginal ? `<span class="badge badge-rolada">↩ ${fmtDate(a.dataOriginal)}</span>` : '';
-      return `<div class="list-item ${a.status} prioridade-${a.prioridade}">
+      return `<div class="list-item ${a.status} prioridade-${a.prioridade}" onclick="abrirDetalhe('${a.id}')">
         <div class="list-item-main">
           <div class="list-item-titulo">${esc(a.titulo)}</div>
           <div class="list-item-sub">
             <span>📅 ${fmtDate(a.data)}</span>
             <span>👤 ${esc(c ? c.nome : '—')}</span>
-            ${a.descricao ? `<span>${esc(a.descricao)}</span>` : ''}
+            ${a.descricao ? `<span style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.descricao)}</span>` : ''}
           </div>
         </div>
         <div class="list-item-badges">
@@ -410,7 +453,7 @@ function renderAtividades(lista, consultores) {
           <span class="badge badge-${a.prioridade}">${a.prioridade}</span>
           <span class="badge badge-${a.status}">${a.status}</span>
         </div>
-        <div class="list-item-actions">
+        <div class="list-item-actions" onclick="event.stopPropagation()">
           ${acao}
           <button class="btn-icon" onclick="editarAtividade('${a.id}')">✏️</button>
           <button class="btn-icon excluir" onclick="excluirAtividade('${a.id}')">🗑</button>
@@ -577,8 +620,64 @@ function fecharModal(id) {
   document.getElementById('overlay').classList.add('hidden');
 }
 function fecharTodos() {
-  ['modalAtividade','modalConsultor'].forEach(id => document.getElementById(id).classList.add('hidden'));
+  ['modalAtividade','modalConsultor','modalDetalhe'].forEach(id => document.getElementById(id).classList.add('hidden'));
   document.getElementById('overlay').classList.add('hidden');
+}
+
+// ── Modal Detalhe ────────────────────────────────────────────
+let detalheAtividadeId = null;
+
+function abrirDetalhe(id) {
+  const db = load();
+  const a  = db.atividades.find(x => x.id === id);
+  if (!a) return;
+  detalheAtividadeId = id;
+  const c = db.consultores.find(x => x.id === a.consultorId);
+
+  document.getElementById('detalheTitulo').textContent = a.titulo;
+  document.getElementById('detalheDesc').textContent   = a.descricao || '';
+  document.getElementById('detalheData').textContent   = fmtDate(a.data);
+  document.getElementById('detalheConsultor').textContent = c ? c.nome : '—';
+  document.getElementById('detalheCriado').textContent = a.criadoEm ? fmtDateTime(a.criadoEm) : '—';
+
+  const badgeP = document.getElementById('detalheBadgePrioridade');
+  badgeP.textContent = a.prioridade;
+  badgeP.className   = `badge badge-${a.prioridade}`;
+
+  const badgeS = document.getElementById('detalheBadgeStatus');
+  badgeS.textContent = a.status;
+  badgeS.className   = `badge badge-${a.status}`;
+
+  const badgeR = document.getElementById('detalheBadgeRolada');
+  if (a.dataOriginal) {
+    badgeR.textContent = `↩ Rolada de ${fmtDate(a.dataOriginal)}`;
+    badgeR.classList.remove('hidden');
+    document.getElementById('detalheOriginal').textContent = fmtDate(a.dataOriginal);
+    document.getElementById('detalheRoladaField').classList.remove('hidden');
+  } else {
+    badgeR.classList.add('hidden');
+    document.getElementById('detalheRoladaField').classList.add('hidden');
+  }
+
+  document.getElementById('detalheBtnConcluir').classList.toggle('hidden', a.status === 'concluida');
+  document.getElementById('detalheBtnReabrir').classList.toggle('hidden',  a.status === 'pendente');
+
+  abrirModal('modalDetalhe');
+}
+
+function concluirDetalhe() {
+  if (!detalheAtividadeId) return;
+  concluir(detalheAtividadeId);
+  fecharModal('modalDetalhe');
+}
+function reabrirDetalhe() {
+  if (!detalheAtividadeId) return;
+  reabrir(detalheAtividadeId);
+  fecharModal('modalDetalhe');
+}
+function editarDetalhe() {
+  fecharModal('modalDetalhe');
+  editarAtividade(detalheAtividadeId);
 }
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -586,6 +685,11 @@ function fmtDate(iso) {
   if (!iso) return '—';
   const [y,m,d] = iso.split('-');
   return `${d}/${m}/${y}`;
+}
+function fmtDateTime(iso) {
+  if (!iso) return '—';
+  const dt = new Date(iso);
+  return dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
 }
 function esc(s) {
   return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
